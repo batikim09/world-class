@@ -7,14 +7,16 @@
 # ===========================================
 
 PROGRAM_NAME := test
+SHAREDLIB_NAME := libworld.so
 
 # compiler
 CXX := g++ -std=c++11
 CXXFLAGS := -Wall -Wextra -O3 -mavx -fopenmp -pipe
+CXX_SHARED_FLAGS := -shared -fPIC -Wall
 
 # external libraries
 LIBS := -lfftw3 -lsndfile
-EXT_INCLUDES := -I/home/yukara/Tools/Eigen_3.3.2/
+EXT_INCLUDES := -I/usr/local/include/eigen3/Eigen
 
 # source directories
 ROOT_DIR := .
@@ -31,11 +33,13 @@ INCLUDES := $(addprefix -I,$(shell find $(ROOT_DIR) -path $(ROOT_DIR)/.git -prun
 # output directories
 OUT_DIR := build
 PROGRAM_DIR := $(OUT_DIR)/bin
+SHARED_DIR := $(OUT_DIR)/lib
 OBJ_DIR := $(OUT_DIR)/obj
 DEPEND_DIR := $(OUT_DIR)/depend
 
 # output files
 PROGRAM := $(PROGRAM_DIR)/$(PROGRAM_NAME)
+SHARED := $(SHARED_DIR)/$(SHAREDLIB_NAME)
 SOURCE_NAMES = $(SOURCES) # $(notdir $(SOURCES))
 OBJS := $(addprefix $(OBJ_DIR)/,$(SOURCE_NAMES:.cpp=.o))
 DEPENDS := $(addprefix $(DEPEND_DIR)/,$(SOURCE_NAMES:.cpp=.depend))
@@ -43,21 +47,29 @@ DEPENDS := $(addprefix $(DEPEND_DIR)/,$(SOURCE_NAMES:.cpp=.depend))
 # rules
 .PHONY: all
 all: $(DEPENDS) $(PROGRAM)
-$(PROGRAM): $(OBJS)
+$(PROGRAM): $(SHARED)
 	@echo "\ngenerating $@"
 	@mkdir -p $(PROGRAM_DIR)
-	$(CXX) $(CXXFLAGS) $^ -o $(PROGRAM) $(LIBS)
+	cp $(SHARED) $(PROGRAM_DIR)/$(SHAREDLIB_NAME)
+	cp $(SHARED) $(ROOT_DIR)/$(SHAREDLIB_NAME) #this is just to play a demo. You should install the shared lib into system.
+	$(CXX) $(CXXFLAGS) -I$(INCLUDES) $(SOURCE_DIR)/test/test.cpp -o $(PROGRAM) -lworld -L$(SHARED_DIR)
+
+.PHONY: lib
+lib: $(DEPENDS) $(SHARED)
+$(SHARED): $(OBJS)
+	@echo "\ngenerating $@"
+	@mkdir -p $(SHARED_DIR)
+	$(CXX) $(CXX_SHARED_FLAGS) -o $(SHARED) $(LIBS) $(OBJS) -lc
 
 $(DEPEND_DIR)/%.depend: %.cpp $(HEADERS)
 	@echo "\ngenerating $@"
 	@if [ ! -e `dirname $@` ]; then mkdir -p `dirname $@`; fi
-	@$(CXX) $(CXXFLAGS) $(INCLUDES) -MM $< > $@ $(LIBS) 
+	@$(CXX) $(CXXFLAGS) $(INCLUDES) -MM $< > $@ $(LIBS)
 
 $(OBJ_DIR)/%.o: %.cpp
 	@echo "\ngenerating $@"
 	@if [ ! -e `dirname $@` ]; then mkdir -p `dirname $@`; fi
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $^ -o $@ $(LIBS) 
-
+	$(CXX) $(CXXFLAGS) -fPIC $(INCLUDES) -c $^ -o $@ $(LIBS)
 
 ifneq "$(MAKECMDGOALS)" "clean"
 -include $(DEPENDS)

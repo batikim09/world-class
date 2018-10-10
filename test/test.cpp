@@ -77,7 +77,7 @@ void F0EstimationHarvest(
 	double *x, int x_length,  WorldParameters *world_parameters)
 {
 	cout << "\nF0 estimation (Harvest)" << endl;
-	
+
 	// You can change the frame period.
 	// But the estimation is carried out with 1-ms frame shift.
 	HarvestOption option;
@@ -89,11 +89,11 @@ void F0EstimationHarvest(
 	// You can use a Cosine table for fast computation,
 	// but the computation is not exactly same as the original algorithm.
 	// This option is not included int the original codes.
-	
+
 	// option.use_cos_table = true;
-	
+
 	auto t1 = get_time_now();
-	
+
 	Harvest harvest = Harvest(world_parameters->fs, option);
 
 	auto t2_1 = get_time_now();
@@ -104,11 +104,11 @@ void F0EstimationHarvest(
 	world_parameters->time_axis = new double[world_parameters->f0_length];
 
 	auto t2_2 = get_time_now();
-	
+
 	harvest.compute(x, x_length, world_parameters->time_axis, world_parameters->f0);
 
 	auto t3 = get_time_now();
-	
+
 	cout << "\t initialize:\t" << get_elapsed_msec(t1, t2_1) << " [msec]" << endl;
 	cout << "\t compute:\t" << get_elapsed_msec(t2_2, t3) << " [msec]" << endl;
 }
@@ -118,7 +118,7 @@ void SpectralEnvelopeEstimation(
 	double *x, int x_length, WorldParameters *world_parameters)
 {
 	cout << "\nSpectral envelope estimation (CheapTrick)" << endl;
-	
+
 	// Important notice (2017/01/02)
 	// You can set the fft_size.
 	// Default is GetFFTSizeForCheapTrick(world_parameters->fs, &option);
@@ -133,13 +133,13 @@ void SpectralEnvelopeEstimation(
 
 	// Default value was modified to -0.15.
 	// option.q1 = -0.15;
-	
+
 	auto t1 = get_time_now();
-	
+
 	CheapTrick cheaptrick = CheapTrick(world_parameters->fs, option);
 
 	auto t2_1 = get_time_now();
-	
+
 	// Parameters setting and memory allocation.
 	int fft_size = cheaptrick.getFFTSizeForCheapTrick(world_parameters->fs, option.f0_floor);
 	world_parameters->fft_size = fft_size;
@@ -147,15 +147,15 @@ void SpectralEnvelopeEstimation(
 	for (int i = 0; i < world_parameters->f0_length; ++i)
 		world_parameters->spectrogram[i] =
 			new double[world_parameters->fft_size / 2 + 1];
-	
+
 	auto t2_2 = get_time_now();
-	
+
 	cheaptrick.compute(x, x_length, world_parameters->time_axis,
 					   world_parameters->f0, world_parameters->f0_length,
 					   world_parameters->spectrogram);
 
 	auto t3 = get_time_now();
-	
+
 	cout << "\t initialize:\t" << get_elapsed_msec(t1, t2_1) << " [msec]" << endl;
 	cout << "\t compute:\t" << get_elapsed_msec(t2_2, t3) << " [msec]" << endl;
 }
@@ -165,13 +165,13 @@ void AperiodicityEstimation(
 	double *x, int x_length, WorldParameters *world_parameters)
 {
 	cout << "\nAperiodicity estimation (D4C)" << endl;
-	
+
 	// Parameters setting and memory allocation.
 	world_parameters->aperiodicity = new double *[world_parameters->f0_length];
 	for (int i = 0; i < world_parameters->f0_length; ++i) {
 		world_parameters->aperiodicity[i] = new double[world_parameters->fft_size / 2 + 1];
 	}
-	
+
 	// Comment was modified because it was confusing (2017/12/10).
 	// It is used to determine the aperiodicity in whole frequency band.
 	// D4C identifies whether the frame is voiced segment even if it had an F0.
@@ -180,19 +180,19 @@ void AperiodicityEstimation(
 	// If you want to use the conventional D4C, please set the threshold to 0.0.
 	D4COption option;
 	option.threshold = 0.85;
-	
+
 	auto t1 = get_time_now();
-	
+
 	D4C d4c = D4C(world_parameters->fs, option);
 
 	auto t2 = get_time_now();
-	
+
 	d4c.compute(x, x_length, world_parameters->time_axis,
 				world_parameters->f0, world_parameters->f0_length,
 				world_parameters->fft_size, world_parameters->aperiodicity);
-		
+
 	auto t3 = get_time_now();
-	
+
 	cout << "\t initialize:\t" << get_elapsed_msec(t1, t2) << " [msec]" << endl;
 	cout << "\t compute:\t" << get_elapsed_msec(t2, t3) << " [msec]" << endl;
 }
@@ -207,7 +207,7 @@ void ParameterModification(
 		double shift = atof(argv[3]);
 		for (int i = 0; i < f0_length; ++i) f0[i] *= shift;
 	}
-	
+
 	if (argc < 5) return;
 
 	// Spectral stretching
@@ -221,7 +221,7 @@ void ParameterModification(
 		freq_axis1[i] = ratio * i / fft_size * fs;
 		freq_axis2[i] = static_cast<double>(i) / fft_size * fs;
 	}
-	
+
 	for (int i = 0; i < f0_length; ++i) {
 		for (int j = 0; j <= fft_size / 2; ++j)
 			spectrum1[j] = log(spectrogram[i][j]);
@@ -235,7 +235,7 @@ void ParameterModification(
 			spectrogram[i][j] =
 				spectrogram[i][static_cast<int>(fft_size / 2.0 * ratio) - 1];
 	}
-	
+
 	delete[] spectrum1;
 	delete[] spectrum2;
 	delete[] freq_axis1;
@@ -246,19 +246,19 @@ void WaveformSynthesis1(
 	WorldParameters *world_parameters, int fs, int y_length, double *y)
 {
 	cout << "\nSynthesis 1 (conventional algorithm)" << endl;
-	
+
 	auto t1 = get_time_now();
-	
+
 	Synthesis synthesis = Synthesis(fs, world_parameters->fft_size, world_parameters->frame_period);
-	
+
 	auto t2 = get_time_now();
-	
+
 	synthesis.compute(world_parameters->f0, world_parameters->f0_length,
 					  world_parameters->spectrogram, world_parameters->aperiodicity,
 					  y_length, y);
-	
+
 	auto t3 = get_time_now();
-	
+
 	cout << "\t initialize:\t" << get_elapsed_msec(t1, t2) << " [msec]" << endl;
 	cout << "\t compute:\t" << get_elapsed_msec(t2, t3) << " [msec]" << endl;
 }
@@ -300,13 +300,13 @@ int main(int argc, char *argv[]) {
 		else { cerr << "error: The file is not .wav format.\n" << endl; }
 		return -1;
 	}
-	
-	
+
+
 	// wavread() must be called after GetAudioLength().
 	int fs, nbit;
 	double *x = new double[x_length];
 	wavread(argv[1], &fs, &nbit, x);
-	
+
 	DisplayInformation(fs, nbit, x_length);
 
 	//---------------------------------------------------------------------------
@@ -327,7 +327,7 @@ int main(int argc, char *argv[]) {
 	for (int i = 0; i < world_parameters.f0_length; i++) {
 		f0_sum += world_parameters.f0[i];
 	}
-    
+
 	// Spectral envelope estimation
 	SpectralEnvelopeEstimation(x, x_length, &world_parameters);
 
@@ -335,7 +335,7 @@ int main(int argc, char *argv[]) {
 	for (int i = 0; i < world_parameters.f0_length; ++i)
 		for (int j = 0; j < world_parameters.fft_size / 2 + 1; ++j)
 		{ spec_sum +=  world_parameters.spectrogram[i][j]; }
-  
+
 	// Aperiodicity estimation by D4C
 	AperiodicityEstimation(x, x_length, &world_parameters);
 
@@ -343,13 +343,21 @@ int main(int argc, char *argv[]) {
 	for (int i = 0; i < world_parameters.f0_length; ++i)
 		for (int j = 0; j < world_parameters.fft_size / 2 + 1; ++j)
 		{ ap_sum +=  world_parameters.aperiodicity[i][j]; }
-	
+
+	// Summarize the Parameters
+	cout << "fs: " << world_parameters.fs << endl;
+	cout << "frame_period: " << world_parameters.frame_period << endl;
+	cout << "f_length: " << world_parameters.f0_length << endl;
+	cout << "fft_size: " << world_parameters.fft_size << endl;
+	cout << "spec_sum: " << spec_sum << endl;
+	cout << "f0_sum: " << spec_sum << endl;
+
 	// Note that F0 must not be changed until all parameters are estimated.
 	ParameterModification(argc, argv, fs, world_parameters.f0_length,
 						  world_parameters.fft_size, world_parameters.f0,
 						  world_parameters.spectrogram);
 
-	
+
 	//---------------------------------------------------------------------------
 	// Synthesis part
 	// There are three samples in speech synthesis
@@ -363,7 +371,7 @@ int main(int argc, char *argv[]) {
 									world_parameters.frame_period / 1000.0 * fs) + 1;
 	double *y = new double[y_length]();
 
-	
+
 	// Synthesis 1 (conventional synthesis)
 	WaveformSynthesis1(&world_parameters, fs, y_length, y);
 	if (argc == 2) { sprintf(filename, "output_1.wav", argv[2]); }
