@@ -4,7 +4,7 @@
 // Last update: 2017/03/12
 //
 // .wav input/output functions were modified for compatibility with C language.
-// Since these functions (wavread() and wavwrite()) are roughly implemented,
+// Since these functions (WavRead() and WavWrite()) are roughly implemented,
 // we recommend more suitable functions provided by other organizations.
 // This file is independent of WORLD project and for the test.cpp.
 //-----------------------------------------------------------------------------
@@ -74,7 +74,7 @@ static int CheckHeader(FILE *fp) {
 
 //-----------------------------------------------------------------------------
 // GetParameters() extracts fp, nbit, wav_length from the .wav file
-// This function is only used in wavread().
+// This function is only used in WavRead().
 //-----------------------------------------------------------------------------
 static int GetParameters(FILE *fp, int *fs, int *nbit, int *wav_length) {
 	char data_check[5] = {0};
@@ -113,7 +113,7 @@ static int GetParameters(FILE *fp, int *fs, int *nbit, int *wav_length) {
 
 }  // namespace
 
-void wavwrite(const double *x, int x_length, int fs, int nbit,
+void WavWrite(const double *x, int x_length, int fs, int nbit,
 			  const char *filename) {
 	FILE *fp = fopen(filename, "wb");
 	if (NULL == fp) {
@@ -215,7 +215,7 @@ int GetAudioLength(const char *filename) {
 	return wav_length;
 }
 
-void wavread(const char* filename, int *fs, int *nbit, double *x) {
+void WavRead(const char* filename, int *fs, int *nbit, double *x) {
 	FILE *fp = fopen(filename, "rb");
 	if (NULL == fp) {
 		printf("File not found.\n");
